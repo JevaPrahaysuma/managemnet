@@ -53,9 +53,20 @@
     - gorm
     - gin gonic
 
+3. Running Application
+
+- Step 1:
+```
+docker compose up --build
+```
+- Step 2:
+```
+go run main.go
+```
+
 # Design Architecture
 
-![design architecture](./src/desaign pattern.jpg)
+![design architecture](https://github.com/JevaPrahaysuma/management/src/desaign pattern.jpg)
 
 # Link Collection API
 ```
