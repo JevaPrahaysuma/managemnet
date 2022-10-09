@@ -9,8 +9,10 @@ import (
 	"github.com/JevaPrahaysuma/managemnet.git/models"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
-	"gorm.io/driver/postgres"
-	"gorm.io/gorm"
+
+	//"gorm.io/gorm"
+	"github.com/jinzhu/gorm"
+	_ "github.com/jinzhu/gorm/dialects/postgres"
 )
 
 var DB *gorm.DB
@@ -18,12 +20,15 @@ var DB *gorm.DB
 //const uri = "mongodb://user:pass@sample.host:2701/?maxPoolSize=20&w=majority"
 
 func Connect() {
-	db, err := gorm.Open(postgres.Open("postgres://postgres:postgres@localhost:5432/postgres"), &gorm.Config{})
+	db, err := gorm.Open("postgres", "host=localhost port=5432 sslmode=disable user=postgres dbname=postgres password=postgres")
+	//defer db.Close()
+	//db, err := gorm.Open(postgres.Open("postgres://postgres:postgres@localhost:5432/postgres"), &gorm.Config{})
 	if err != nil {
 		panic(err)
 	}
-	db.AutoMigrate(&models.User{})
+	db.AutoMigrate(&models.User{}, &models.Menu{}, &models.MenuItem{}, &models.MenuPage{}, &models.Dish{})
 	DB = db
+
 }
 
 func ConnectDB() *mongo.Client {
