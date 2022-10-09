@@ -66,7 +66,7 @@ go run main.go
 
 # Design Architecture
 
-![design architecture](https://github.com/JevaPrahaysuma/management/src/desaign_pattern.jpg)
+![design architecture](/src/desaign_pattern.jpg)
 
 # Link Collection API
 ```
