@@ -6,5 +6,5 @@ import (
 )
 
 func MenuRoute(router *gin.Engine) {
-	router.GET("/", controller.GetMenu)
+	router.GET("/user/", controller.GetMenuPostgres)
 }

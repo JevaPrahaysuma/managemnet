@@ -1,7 +1,7 @@
 package models
 
 type Dish struct {
-	ID            int64  `json:"id,omitempty" field:"id" bson:"id,omitempty"`
+	ID            int64  `json:"id,omitempty" field:"id" bson:"id,omitempty" gorm:"primary_key"`
 	Name          string `json:"name,omitempty" field:"name" bson:"name,omitempty"`
 	Description   string `json:"description,omitempty" field:"description" bson:"description,omitempty"`
 	MenusAppeared int64  `json:"menus_appeared,omitempty" field:"menus_appeared" bson:"menus_appeared,omitempty"`

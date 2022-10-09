@@ -39,73 +39,13 @@ func GetMenu(c *gin.Context) {
 				{"from", "menu_page"},
 				{"localField", "menu_page_id"},
 				{"foreignField", "id"},
-				{"pipeline", []bson.D{
-					// Sort tags by their name field in asc. -1 = desc
-					{
-						{"from", "menu"},
-						{"localField", "menu_id"},
-						{"foreignField", "id"},
-						{"as", "menus"},
-						{"$sort", bson.D{
-							{"id", 1},
-						}},
-					},
-				}},
 				{"as", "menu_pages"},
 			},
 
 			// Use tags as the field name to match struct field.
 		},
-		// {
-		// 	"pipeline", bson.D{
-		// 		{"$lookup", bson.D{
-		// 			{"from", "dish"},
-		// 			{"localField", "dish_id"},
-		// 			{"foreignField", "$id"},
-		// 			{"pipeline", []bson.D{
-		// 				// Sort tags by their name field in asc. -1 = desc
-		// 				{
-		// 					{"$sort", bson.D{
-		// 						{"id", 1},
-		// 					}},
-		// 				},
-		// 			}},
-		// 			{"as", "dishes"},
-		// 		}},
-		// 	},
-		// },
 	}
-	// qry := []bson.M{
-	// 	{
-	// 		"$lookup": bson.M{
-	// 			// Define the tags collection for the join.
-	// 			"from":         "menu_page",
-	// 			"localField":   "menu_page_id",
-	// 			"foreignField": "id",
-	// 			"pipeline": []bson.M{
-	// 				// Sort tags by their name field in asc. -1 = desc
-	// 				{
-	// 					"$sort": bson.M{
-	// 						"id": 1,
-	// 					},
-	// 				},
-	// 			},
-	// 		},
-	// 		"as": "menu_pages",
-	// 	},
-	// 	// Use tags as the field name to match struct field.
-	// 	// {
-	// 	// 	"$lookup": bson.M{
-	// 	// 		"from":         "dish",
-	// 	// 		"localField":   "dish_id",
-	// 	// 		"foreignField": "id",
-	// 	// 	},
-	// 	// 	"as": "dishes",
-	// 	// },
-	// 	{
-	// 		"$limit": 10,
-	// 	},
-	// }
+
 	qryDishies := bson.D{{
 		"$lookup", bson.D{
 			{"from", "dish"},
@@ -126,11 +66,6 @@ func GetMenu(c *gin.Context) {
 		"$limit", 10,
 		// Use tags as the field name to match struct field.
 	}}
-	// select * from menu_page
-	// join menu_item on menu_page.menu_item_id = menu_item.id
-	// join dish on menu_page.dish_id = dish.id
-	// join menu on menu.id = menu_item.menu_id
-	// where
 
 	//unwindStage := bson.D{{"$unwind", bson.D{{"path", "$menu_page_id"}, {"preserveNullAndEmptyArrays", false}}}}
 
@@ -179,4 +114,70 @@ func GetMenu(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"message": err})
 		return
 	}
+}
+
+func GetMenuPostgres(c *gin.Context) {
+	var qQuery string
+	temp := 0
+	// check search menu and dish
+	if c.Query("q") != "" {
+		qQuery += `(menus.name LIKE '%` + c.Query("q") + `%' OR dishes.name LIKE '%` + c.Query("q") + `%') `
+		temp++
+	}
+	var qVanue string
+	if c.Query("vanues") != "" {
+		if temp != 0 {
+			qVanue = "AND"
+		}
+		qVanue += ` menus.vanue like '%` + c.Query("vanues") + `%' `
+		temp++
+	}
+	var qEvent string
+	if c.Query("events") != "" {
+		if temp != 0 {
+			qEvent = "AND"
+		}
+		qEvent += ` menus.event LIKE '%` + c.Query("events") + `%' `
+		temp++
+	}
+	var qPrice string
+	if c.Query("startPrice") != "" || c.Query("endPrice") != "" {
+		tempStart := c.DefaultQuery("startPrice", "0")
+		tempEnd := c.DefaultQuery("endPrice", "0")
+		if tempStart == "" {
+			tempStart = "0"
+		}
+		if tempEnd == "" {
+			tempEnd = "0"
+		}
+		if temp != 0 {
+			qPrice = "AND"
+		}
+		qPrice += ` (menu_items.price >= ` + tempStart + ` AND menu_items.price <= ` + tempEnd + `)`
+		temp++
+	}
+
+	var menuList []models.ListMenu
+	if err := config.DB.Table("menu_items").Select(`menu_items.id as menu_item_id, dishes.name as name_dish, 
+	dishes.description as description_dish, menu_items.price, menus.name as name_menu,
+	menus.sponsor, menus.event, menus.vanue, menus.place, menus.physical_description,
+	menus.occasion, menus.notes, menus.call_number, menus.keywords, menus.language,
+	menus.date, menus.location, menus.location_type, menus.currency, menus.currency_symbol,
+	menus.status, menu_items.created_at, menu_items.updated_at`).Joins(`LEFT JOIN menu_pages on 
+	menu_items.menu_page_id = menu_pages.id`).Joins(`LEFT JOIN dishes on 
+	menu_items.dish_id = dishes.id`).Joins(`LEFT JOIN menus on 
+	menu_pages.menu_id = menus.id`).Where(qQuery + qVanue + qEvent + qPrice).Limit(10).Find(&menuList).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, models.ApiResponse{Status: http.StatusInternalServerError, Message: "error", Data: map[string]interface{}{"data": err.Error()}})
+		return
+	}
+
+	// if err := config.DB.Limit(10).Find(&menuPage).Error; err != nil {
+	// 	c.JSON(http.StatusInternalServerError, models.ApiResponse{Status: http.StatusInternalServerError, Message: "error", Data: map[string]interface{}{"data": err.Error()}})
+	// 	return
+	// }
+	c.JSON(http.StatusOK,
+		models.ApiResponse{Status: http.StatusOK, Message: "success", Data: map[string]interface{}{"data": menuList}},
+	)
+
+	//sqlDB.Close()
 }
